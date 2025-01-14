@@ -47,74 +47,74 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 def connect_to_db():
-try:
-conn = psycopg2.connect(
-host="rc1a-p8bp15mmxsfwpbt0.mdb.yandexcloud.net",
-port="6432",
-database="db1",
-user="test_user",
-password="j2M{CnnFq@"
-)
-return conn
-except Exception as e:
-print(f"Ошибка подключения к базе данных: {e}")
-return None
+    try:
+        conn = psycopg2.connect(
+        host="rc1a-p8bp15mmxsfwpbt0.mdb.yandexcloud.net",
+        port="6432",
+        database="db1",
+        user="test_user",
+        password="j2M{CnnFq@"
+        )
+    return conn
+    except Exception as e:
+        print(f"Ошибка подключения к базе данных: {e}")
+    return None
 
 def get_response_times():
-"""Выполнить запрос для получения времени ответа"""
-query = """
-WITH ranked_messages AS (
-SELECT
-m.message_id,
-m.type,
-m.entity_id,
-m.created_by,
-m.created_at,
-mg.name_mop,
-LAG(m.type) OVER (PARTITION BY m.entity_id ORDER BY m.created_at) as prev_type,
-LAG(m.created_at) OVER (PARTITION BY m.entity_id ORDER BY m.created_at) as prev_created_at
-FROM test.chat_messages m
-LEFT JOIN test.managers mg ON m.created_by = mg.mop_id
-ORDER BY m.entity_id, m.created_at
-),
-response_times AS (
-SELECT
-rm.,
-CASE
-WHEN rm.type = 'outgoing_chat_message'
-AND rm.prev_type = 'incoming_chat_message' THEN
-CASE
--- Если предыдущее сообщение было в нерабочее время (00:00-09:30)
-WHEN TO_TIMESTAMP(rm.prev_created_at)::time < TIME '09:30:00'
-AND TO_TIMESTAMP(rm.created_at)::time >= TIME '09:30:00' THEN
-EXTRACT(EPOCH FROM (
-TO_TIMESTAMP(rm.created_at) -
-TO_TIMESTAMP(rm.prev_created_at)::date + INTERVAL '9 hours 30 minutes'
-))
--- Если текущий ответ после рабочего времени
-WHEN TO_TIMESTAMP(rm.created_at)::time > TIME '00:00:00' THEN
-EXTRACT(EPOCH FROM (
-TO_TIMESTAMP(rm.created_at) -
-TO_TIMESTAMP(rm.prev_created_at)
-))
-ELSE NULL
-END
-ELSE NULL
-END as response_time_seconds
-FROM ranked_messages rm
-)
-SELECT
-name_mop,
-COUNT() as total_responses,
-ROUND(AVG(response_time_seconds)/60, 2) as avg_response_time_minutes,
-ROUND(MIN(response_time_seconds)/60, 2) as min_response_time_minutes,
-ROUND(MAX(response_time_seconds)/60, 2) as max_response_time_minutes
-FROM response_times
-WHERE response_time_seconds IS NOT NULL
-AND name_mop IS NOT NULL
-GROUP BY name_mop
-ORDER BY avg_response_time_minutes;
-"""
+    """Выполнить запрос для получения времени ответа"""
+    query = """
+    WITH ranked_messages AS (
+    SELECT
+    m.message_id,
+    m.type,
+    m.entity_id,
+    m.created_by,
+    m.created_at,
+    mg.name_mop,
+    LAG(m.type) OVER (PARTITION BY m.entity_id ORDER BY m.created_at) as prev_type,
+    LAG(m.created_at) OVER (PARTITION BY m.entity_id ORDER BY m.created_at) as prev_created_at
+    FROM test.chat_messages m
+    LEFT JOIN test.managers mg ON m.created_by = mg.mop_id
+    ORDER BY m.entity_id, m.created_at
+    ),
+    response_times AS (
+    SELECT
+    rm.,
+    CASE
+    WHEN rm.type = 'outgoing_chat_message'
+    AND rm.prev_type = 'incoming_chat_message' THEN
+    CASE
+    -- Если предыдущее сообщение было в нерабочее время (00:00-09:30)
+    WHEN TO_TIMESTAMP(rm.prev_created_at)::time < TIME '09:30:00'
+    AND TO_TIMESTAMP(rm.created_at)::time >= TIME '09:30:00' THEN
+    EXTRACT(EPOCH FROM (
+    TO_TIMESTAMP(rm.created_at) -
+    TO_TIMESTAMP(rm.prev_created_at)::date + INTERVAL '9 hours 30 minutes'
+    ))
+    -- Если текущий ответ после рабочего времени
+    WHEN TO_TIMESTAMP(rm.created_at)::time > TIME '00:00:00' THEN
+    EXTRACT(EPOCH FROM (
+    TO_TIMESTAMP(rm.created_at) -
+    TO_TIMESTAMP(rm.prev_created_at)
+    ))
+    ELSE NULL
+    END
+    ELSE NULL
+    END as response_time_seconds
+    FROM ranked_messages rm
+    )
+    SELECT
+    name_mop,
+    COUNT() as total_responses,
+    ROUND(AVG(response_time_seconds)/60, 2) as avg_response_time_minutes,
+    ROUND(MIN(response_time_seconds)/60, 2) as min_response_time_minutes,
+    ROUND(MAX(response_time_seconds)/60, 2) as max_response_time_minutes
+    FROM response_times
+    WHERE response_time_seconds IS NOT NULL
+    AND name_mop IS NOT NULL
+    GROUP BY name_mop
+    ORDER BY avg_response_time_minutes;
+    """
 
 try:
     conn = connect_to_db()
@@ -224,3 +224,4 @@ if df is not None:
     )
 else:
     st.error("Не удалось получить данные из базы данных. Пожалуйста, проверьте подключение.")
+
