@@ -115,17 +115,19 @@ def get_response_times():
     GROUP BY name_mop
     ORDER BY avg_response_time_minutes;
     """
+    
+    
+    try:
+        conn = connect_to_db()
+        if conn:
+            df = pd.read_sql_query(query, conn)
+            conn.close()
+            return df
+        return None
+    except Exception as e:
+        print(f"Ошибка выполнения запроса: {e}")
+        return None
 
-try:
-    conn = connect_to_db()
-    if conn:
-        df = pd.read_sql_query(query, conn)
-        conn.close()
-        return df
-    return None
-except Exception as e:
-    print(f"Ошибка выполнения запроса: {e}")
-    return None
 
 st.set_page_config(page_title="Анализ времени ответа менеджеров", layout="wide")
 
