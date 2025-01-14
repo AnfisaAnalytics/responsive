@@ -55,10 +55,10 @@ def connect_to_db():
         user="test_user",
         password="j2M{CnnFq@"
         )
-    return conn
+        return conn
     except Exception as e:
         print(f"Ошибка подключения к базе данных: {e}")
-    return None
+        return None
 
 def get_response_times():
     """Выполнить запрос для получения времени ответа"""
