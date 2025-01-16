@@ -161,7 +161,7 @@ font-size:1.5rem;}
 background-color:#fff;
 box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
-
+div:has(div#cont0) {background-color: #E4F2EC}
     #root > div:nth-child(1) > div.withScreencast > div > div > div > section > div.block-container.st-emotion-cache-z5fcl4.ea3mdgi5 > div > div > div > div:nth-child(5) > div:nth-child(1) > div > div > div > div:nth-child(1) > div > label > div > div > p{
     font-size:1.5rem
     }
@@ -530,7 +530,7 @@ def main():
         cont0 = st.container()
         with cont0:
             # cont3.markdown("<div class='metrics-container'>", unsafe_allow_html=True)
-            cont0.markdown("<div >Показатели эффективности операторов</div>", unsafe_allow_html=True)
+            cont0.markdown("<div id='cont0'>Показатели эффективности операторов</div>", unsafe_allow_html=True)
             
             fig = create_performance_chart(operator_stats)
             cont0.plotly_chart(fig, use_container_width=True)
@@ -577,7 +577,7 @@ def main():
         # 1. Контейнер для среднего времени ответа
         cont1 = st.container()
         with cont1:
-            cont1.markdown("<div class='metric-title'>Среднее время ответа</div>", unsafe_allow_html=True)
+            cont1.markdown("<div id='cont1'class='metric-title'>Среднее время ответа</div>", unsafe_allow_html=True)
             
             avg_response = df['avg_response_minutes'].mean()
             avg_sla = df['sla_percentage'].mean()
@@ -597,7 +597,7 @@ def main():
         cont2 = st.container()
         with cont2:
             # cont2.markdown("<div class='metrics-container'>", unsafe_allow_html=True)
-            cont2.markdown("<div class='metric-title'>Статистика</div>", unsafe_allow_html=True)
+            cont2.markdown("<div id='cont2' class='metric-title'>Статистика</div>", unsafe_allow_html=True)
             cont2.dataframe(
                 operator_stats,
                 hide_index=True,
@@ -615,7 +615,7 @@ def main():
         cont3 = st.container()
         with cont3:
             # cont3.markdown("<div class='metrics-container'>", unsafe_allow_html=True)
-            cont3.markdown("<div class='metric-title'>Распределение времени ответа</div>", unsafe_allow_html=True)
+            cont3.markdown("<div id='cont3' class='metric-title'>Распределение времени ответа</div>", unsafe_allow_html=True)
             
             response_distribution = pd.DataFrame({
                 'Время ответа': ['До 5 минут', '5-15 минут', 'Более 15 минут'],
