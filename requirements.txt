@@ -1,7 +1,6 @@
-streamlit==1.29.0
-plotly==5.18.0
-psycopg2-binary==2.9.9
-pandas==2.1.4
-reportlab==4.0.8
-python-dateutil==2.8.2
-pytz==2023.3.post1
+streamlit
+plotly
+psycopg2-binary
+pandas
+reportlab
+kaleido
