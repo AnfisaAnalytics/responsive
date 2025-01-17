@@ -25,8 +25,8 @@ PDF_STYLES = {
     # Размеры визуализаций
     'charts': {
         'performance': {
-            'width': 650,
-            'height': 325
+            'width': 422.5,
+            'height': 211.25
         },
         'distribution': {
             'width': 400,
