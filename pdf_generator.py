@@ -66,7 +66,7 @@ PDF_STYLES = {
 }
 
 # Регистрируем шрифт DejaVuSans
-pdfmetrics.registerFont(TTFont('DejaVuSans', 'fonts/DejaVuSans.ttf'))
+pdfmetrics.registerFont(TTFont('DejaVuSans', 'DejaVuSans.ttf'))
 
 def create_paragraph_cell(text, style):
     """Создает ячейку с автоматическим переносом текста"""
