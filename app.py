@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 import json
 import os
 from pathlib import Path
+from pdf_generator import generate_pdf_report
 
 # Constants for cache
 CACHE_DIR = "cache"
@@ -235,7 +236,7 @@ def get_connection():
         user="test_user",
         password="j2M{CnnFq@"
     )
-
+@st.cache_data(ttl=3600)  # кэширование на 1 час
 def load_initial_data():
     conn = get_connection()
     try:
@@ -267,7 +268,7 @@ def load_initial_data():
         )
     finally:
         conn.close()
-
+@st.cache_data(ttl=3600)
 def get_response_times(start_date, end_date, selected_managers=None, selected_rops=None):
     conn = get_connection()
     try:
@@ -382,6 +383,8 @@ def get_response_times(start_date, end_date, selected_managers=None, selected_ro
         return pd.read_sql_query(query, conn, params=params)
     finally:
         conn.close()
+
+@st.cache_data
 def create_performance_chart(operator_stats):
     fig = go.Figure()
     
@@ -437,6 +440,7 @@ def create_performance_chart(operator_stats):
 
 
 
+
 def main():
     # Load initial data
     min_date, max_date, all_managers, all_rops = load_initial_data()
@@ -457,9 +461,7 @@ def main():
     col_title, col_filters = st.columns([0.6, 0.4])
     
     with col_title:
-        # st.title("")
         st.markdown("### Анализ эффективности работы сервиса поддержки")
-    
     
         # Create three equal columns for filters
         filter_col1, filter_col2, filter_col3 = st.columns(3)
@@ -490,7 +492,7 @@ def main():
             if "All" in selected_rops:
                 selected_rops = all_rops
         
-        # Get data for PDF
+        # Get data for the selected period
         if len(dates) == 2:
             start_date, end_date = dates
         else:
@@ -503,21 +505,11 @@ def main():
             selected_rops if selected_rops else None
         )
         
-        if not df.empty:
-            # PDF download button on a new line
-            csv_data = df.to_csv(index=False).encode('utf-8')
-            st.download_button(
-                label="PDF отчет",
-                data=csv_data,
-                file_name=f'service_support_report_{start_date}_{end_date}.pdf',
-                mime='application/pdf'
-            )
-    
         if df.empty:
             st.warning("Нет данных для выбранных фильтров")
             return
         
-        # Create container for visualizations
+        # Calculate operator stats first as they're needed for multiple visualizations
         operator_stats = df.groupby('name_mop').agg({
             'total_responses': 'sum',
             'avg_response_minutes': 'mean',
@@ -526,16 +518,52 @@ def main():
         
         operator_stats.columns = ['Оператор', 'Обращения', 'Среднее время (мин)', 'SLA %']
         
-        # Performance Chart
+        # Create performance chart
+        fig = create_performance_chart(operator_stats)
+        
+        # Create distribution chart
+        response_distribution = pd.DataFrame({
+            'Время ответа': ['До 5 минут', '5-15 минут', 'Более 15 минут'],
+            'Количество': [
+                df['responses_under_5min'].sum(),
+                df['responses_5_15min'].sum(),
+                df['responses_over_15min'].sum()
+            ]
+        })
+        
+        fig_dist = px.pie(
+            response_distribution,
+            values='Количество',
+            names='Время ответа',
+            color_discrete_sequence=['#5A90C4', '#E6C6FA', '#ECCE98'],
+            height=250
+        )
+        fig_dist.update_layout(margin=dict(t=0, b=0))
+        
+        # Generate PDF report
+        pdf_data = generate_pdf_report(
+            df,
+            operator_stats,
+            fig,
+            fig_dist,
+            start_date,
+            end_date
+        )
+        
+        # PDF download button
+        st.download_button(
+            label="PDF отчет",
+            data=pdf_data,
+            file_name=f'service_support_report_{start_date}_{end_date}.pdf',
+            mime='application/pdf'
+        )
+        
+        # Display performance chart
         cont0 = st.container()
         with cont0:
-            # cont3.markdown("<div class='metrics-container'>", unsafe_allow_html=True)
-            cont0.markdown("<div id='cont0'>Показатели эффективности операторов</div>", unsafe_allow_html=True)
-            
-            fig = create_performance_chart(operator_stats)
+            cont0.markdown("<div class='metric-title'>Показатели эффективности операторов</div>", unsafe_allow_html=True)
             cont0.plotly_chart(fig, use_container_width=True)
             
-        
     with col_filters:
         # Определяем общий стиль для всех контейнеров
         st.markdown(
@@ -553,7 +581,7 @@ def main():
                 color: #5A90C4;
                 font-size: 1.8rem;
                 font-weight: bold;
-                margin: 0.5rem 0;
+                margin: -0.7rem 0 0.5rem 0;
             }
             .metric-title {
                 color: #6A6A6A;
@@ -596,7 +624,6 @@ def main():
         # 2. Контейнер для статистики операторов
         cont2 = st.container()
         with cont2:
-            # cont2.markdown("<div class='metrics-container'>", unsafe_allow_html=True)
             cont2.markdown("<div id='cont2' class='metric-title'>Статистика</div>", unsafe_allow_html=True)
             cont2.dataframe(
                 operator_stats,
@@ -609,33 +636,12 @@ def main():
                 },
                 height=150
             )
-            # cont2.markdown("</div>", unsafe_allow_html=True)
     
         # 3. Контейнер для распределения времени ответа
         cont3 = st.container()
         with cont3:
-            # cont3.markdown("<div class='metrics-container'>", unsafe_allow_html=True)
             cont3.markdown("<div id='cont3' class='metric-title'>Распределение времени ответа</div>", unsafe_allow_html=True)
-            
-            response_distribution = pd.DataFrame({
-                'Время ответа': ['До 5 минут', '5-15 минут', 'Более 15 минут'],
-                'Количество': [
-                    df['responses_under_5min'].sum(),
-                    df['responses_5_15min'].sum(),
-                    df['responses_over_15min'].sum()
-                ]
-            })
-            
-            fig_dist = px.pie(
-                response_distribution,
-                values='Количество',
-                names='Время ответа',
-                color_discrete_sequence=['#5A90C4', '#E6C6FA', '#ECCE98'],
-                height=250
-            )
-            fig_dist.update_layout(margin=dict(t=0, b=0))
             cont3.plotly_chart(fig_dist, use_container_width=True)
-            # cont3.markdown("</div>", unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
