@@ -29,6 +29,7 @@ def generate_sample_data(n_days=100):
 
 # Initialize the Dash app
 app = dash.Dash(__name__)
+server = app.server  # Expose Flask server for Gunicorn
 
 # Generate data
 df = generate_sample_data()
