@@ -1,54 +1,125 @@
-# app.py
-from flask import Flask, render_template
+import dash
+from dash import html, dcc
+import plotly.express as px
 import pandas as pd
 import numpy as np
-import json
 from datetime import datetime, timedelta
 
-app = Flask(__name__)
-
-def generate_sales_data():
-    # Генерируем данные за последние 30 дней
-    dates = [(datetime.now() - timedelta(days=x)).strftime('%Y-%m-%d') for x in range(30)]
-    data = {
-        'date': dates,
-        'sales': np.random.normal(1000, 200, 30).astype(int),  # Продажи
-        'visitors': np.random.normal(500, 100, 30).astype(int),  # Посетители
-        'conversion': np.random.uniform(1, 5, 30).round(2)  # Конверсия
-    }
+# Generate sample data
+def generate_sample_data(n_days=100):
+    dates = pd.date_range(start=datetime.now() - timedelta(days=n_days), 
+                         end=datetime.now(), 
+                         freq='D')
+    
+    products = ['Laptop', 'Phone', 'Tablet']
+    data = []
+    
+    for date in dates:
+        for product in products:
+            sales = np.random.randint(10, 100)
+            revenue = sales * np.random.uniform(500, 1500)
+            data.append({
+                'date': date,
+                'product': product,
+                'sales': sales,
+                'revenue': revenue
+            })
+    
     return pd.DataFrame(data)
 
-def analyze_data(df):
-    analysis = {
-        'total_sales': int(df['sales'].sum()),
-        'avg_daily_sales': int(df['sales'].mean()),
-        'total_visitors': int(df['visitors'].sum()),
-        'avg_conversion': float(df['conversion'].mean().round(2)),
-        'best_day': df.loc[df['sales'].idxmax(), 'date'],
-        'worst_day': df.loc[df['sales'].idxmin(), 'date']
-    }
-    return analysis
+# Initialize the Dash app
+app = dash.Dash(__name__)
 
-@app.route('/')
-def index():
-    # Генерируем и анализируем данные
-    df = generate_sales_data()
-    analysis = analyze_data(df)
-    
-    # Подготавливаем данные для графиков
-    chart_data = {
-        'dates': df['date'].tolist(),
-        'sales': df['sales'].tolist(),
-        'visitors': df['visitors'].tolist(),
-        'conversion': df['conversion'].tolist()
-    }
-    
-    # Сохраняем данные в файл
-    df.to_csv('static/data.txt', index=False)
-    
-    return render_template('index.html', 
-                         analysis=analysis, 
-                         chart_data=json.dumps(chart_data))
+# Generate data
+df = generate_sample_data()
+
+# Create visualizations
+sales_by_product = px.bar(
+    df.groupby('product')['sales'].sum().reset_index(),
+    x='product',
+    y='sales',
+    title='Total Sales by Product'
+)
+
+revenue_trend = px.line(
+    df.groupby('date')['revenue'].sum().reset_index(),
+    x='date',
+    y='revenue',
+    title='Daily Revenue Trend'
+)
+
+# Define the layout
+app.layout = html.Div(
+    className='container mx-auto p-8',
+    children=[
+        html.H1('Sales Analytics Dashboard', 
+                className='text-3xl font-bold mb-8 text-center'),
+        
+        # Metrics Row
+        html.Div(
+            className='grid grid-cols-3 gap-4 mb-8',
+            children=[
+                html.Div(
+                    className='bg-white p-6 rounded-lg shadow',
+                    children=[
+                        html.H3('Total Sales', className='text-lg font-medium text-gray-700'),
+                        html.P(f"{df['sales'].sum():,.0f}", 
+                              className='text-2xl font-bold text-blue-600')
+                    ]
+                ),
+                html.Div(
+                    className='bg-white p-6 rounded-lg shadow',
+                    children=[
+                        html.H3('Total Revenue', className='text-lg font-medium text-gray-700'),
+                        html.P(f"${df['revenue'].sum():,.2f}", 
+                              className='text-2xl font-bold text-green-600')
+                    ]
+                ),
+                html.Div(
+                    className='bg-white p-6 rounded-lg shadow',
+                    children=[
+                        html.H3('Average Daily Sales', className='text-lg font-medium text-gray-700'),
+                        html.P(f"{df.groupby('date')['sales'].sum().mean():,.1f}", 
+                              className='text-2xl font-bold text-purple-600')
+                    ]
+                ),
+            ]
+        ),
+        
+        # Product Filter
+        html.Div(
+            className='bg-white p-4 rounded-lg shadow mb-8',
+            children=[
+                html.Label('Select Product:', className='block text-sm font-medium text-gray-700'),
+                dcc.Dropdown(
+                    id='product-filter',
+                    options=[{'label': product, 'value': product} for product in df['product'].unique()],
+                    value=df['product'].unique()[0],
+                    className='mt-1'
+                )
+            ]
+        ),
+        
+        # Charts
+        html.Div(
+            className='grid grid-cols-2 gap-4',
+            children=[
+                html.Div(
+                    className='bg-white p-4 rounded-lg shadow',
+                    children=[
+                        dcc.Graph(figure=sales_by_product)
+                    ]
+                ),
+                html.Div(
+                    className='bg-white p-4 rounded-lg shadow',
+                    children=[
+                        dcc.Graph(figure=revenue_trend)
+                    ]
+                )
+            ]
+        )
+    ]
+)
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(server=True, debug=True)
