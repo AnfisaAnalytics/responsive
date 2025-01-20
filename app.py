@@ -1,42 +1,34 @@
 import dash
 from dash import html, dcc
 import plotly.express as px
-import numpy as np
 import pandas as pd
 
+# Инициализация приложения
 app = dash.Dash(__name__)
-server = app.server  # Добавьте эту строку
+server = app.server  # Важно для деплоя на Render
 
-# Генерируем случайные данные
-np.random.seed(42)
-x = np.linspace(0, 10, 100)
-y = 2 * x + np.random.normal(0, 1.5, 100)
-
+# Создаем тестовые данные
 df = pd.DataFrame({
-    'x': x,
-    'y': y
+    'Фрукт': ['Яблоки', 'Бананы', 'Апельсины', 'Груши'],
+    'Количество': [20, 15, 25, 10]
 })
 
-# Создаем график (убрали параметр trendline)
-fig = px.scatter(df, x='x', y='y', 
-                title='Простой график рассеяния')
+# Создаем график
+fig = px.bar(df, x='Фрукт', y='Количество', title='Количество фруктов')
 
 # Определяем layout приложения
 app.layout = html.Div([
-    html.H1('Мое первое Dash приложение',
-            style={'textAlign': 'center', 'marginBottom': 30}),
-    
+    html.H1('Мое тестовое Dash приложение', className='header'),
+    html.P('Это простое приложение для демонстрации работы с Dash'),
     dcc.Graph(
-        id='scatter-plot',
+        id='fruit-graph',
         figure=fig
     ),
-    
     html.Div([
-        html.H4('Описание:'),
-        html.P('Это простой график рассеяния. '
-               'Данные сгенерированы с использованием линейной функции y = 2x + шум')
-    ], style={'marginTop': 20, 'padding': '20px'})
+        html.H3('О приложении'),
+        html.P('Это приложение создано с использованием Dash и опубликовано на Render.com')
+    ], className='info-section')
 ])
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run_server(debug=True)
