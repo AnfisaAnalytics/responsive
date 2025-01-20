@@ -4,8 +4,8 @@ import plotly.express as px
 import numpy as np
 import pandas as pd
 
-# Создаем приложение Dash
 app = dash.Dash(__name__)
+server = app.server  # Добавьте эту строку
 
 # Генерируем случайные данные
 np.random.seed(42)
